@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="從 AND 真值表到 Toffoli、酉運算與反計算的量子可逆電路入門簡報。">
+  <title>量子可逆電路｜入門教學</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --shell: #e9ece8;
+      --paper: #fcfbf6;
+      --ink: #152637;
+      --muted: #4b5d69;
+      --line: #c7d0ce;
+      --blue: #124a9e;
+      --blue-bg: #e6eef9;
+      --dark: #0e223b;
+      --cyan: #a2e5fc;
+      --good: #17634d;
+      --bad: #a12d29;
+      --mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--shell);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    [hidden], body:not(.ready) .requires-js { display: none !important; }
+    button, input { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .46; cursor: default; }
+    a { color: var(--blue); text-underline-offset: .22em; }
+    a:hover { text-decoration-thickness: .14em; }
+    :focus-visible { outline: 3px solid #2175d4; outline-offset: 4px; }
+    p, h1, h2, h3, figure { margin: 0; }
+    .wrap { width: min(1320px, calc(100% - 48px)); margin-inline: auto; }
+    .topbar, .controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .topbar { min-height: 62px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .94rem;
+      font-weight: 750;
+      letter-spacing: .045em;
+      color: var(--dark);
+    }
+    .brand-mark { color: var(--blue); font-weight: 600; font-size: 1.55rem; line-height: 1; }
+    .top-actions, .nav-actions, .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--paper);
+      color: var(--ink);
+      font-weight: 680;
+      padding: .55rem .92rem;
+      min-height: 44px;
+      line-height: 1.35;
+    }
+    .button:hover:enabled { border-color: var(--blue); color: var(--blue); background: white; }
+    .button.primary { color: white; background: var(--blue); border-color: var(--blue); }
+    .button.primary:hover:enabled { color: white; background: #0b3678; border-color: #0b3678; }
+    .button.quiet { background: transparent; }
+    .screen { background: var(--paper); box-shadow: 0 14px 44px #14233216; border-radius: 12px; overflow-anchor: none; }
+    .slide {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: clamp(16px, 2.4vh, 26px);
+      min-height: clamp(520px, calc(100svh - 132px), 758px);
+      padding: clamp(24px, 4vw, 60px);
+      border-radius: inherit;
+      font-size: clamp(1rem, 1.4vw, 1.125rem);
+    }
+    .slide h2, .cover h1 {
+      font-weight: 800;
+      line-height: 1.13;
+      letter-spacing: -.045em;
+      overflow-wrap: anywhere;
+    }
+    .slide h2 { font-size: clamp(2rem, 4.05vw, 3.6rem); }
+    .slide h1:focus, .slide h2:focus { outline: none; }
+    .slide h3 { font-size: clamp(1.03rem, 1.65vw, 1.32rem); line-height: 1.4; }
+    .slide-head { display: grid; gap: 8px; }
+    .eyebrow { font-size: .8rem; font-weight: 750; letter-spacing: .12em; color: var(--blue); }
+    .lead { max-width: 64ch; color: var(--muted); font-size: clamp(1rem, 1.7vw, 1.28rem); }
+    .split { display: grid; grid-template-columns: .9fr 1.1fr; gap: clamp(18px, 3.5vw, 56px); align-items: center; }
+    .split > *, .hero-grid > * { min-width: 0; }
+    .stack { display: grid; gap: 15px; }
+    .ref {
+      display: flex;
+      align-items: baseline;
+      gap: .45rem .8rem;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--line);
+      padding-top: .65rem;
+      color: var(--muted);
+      font-size: .83rem;
+    }
+    .ref a { font-weight: 650; }
+    .mono, code { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .formula {
+      font-family: var(--mono);
+      font-size: clamp(1.04rem, 2.34vw, 2.1rem);
+      letter-spacing: -.045em;
+      font-weight: 650;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    .note { color: var(--muted); font-size: .93rem; }
+    .callout { padding: .72rem .9rem; background: var(--blue-bg); border-left: 3px solid var(--blue); }
+    .callout strong { color: #173d75; }
+    .cover {
+      color: #f8fbff;
+      background: radial-gradient(ellipse at 95% 8%, #233e62 0%, transparent 62%), var(--dark);
+    }
+    .hero-grid { display: grid; grid-template-columns: 1.16fr .84fr; gap: clamp(28px, 6vw, 90px); align-items: center; }
+    .cover h1 { font-size: clamp(3rem, 7vw, 6.9rem); }
+    .cover .eyebrow { color: var(--cyan); }
+    .cover .lead { color: #d5e1ed; max-width: 31ch; }
+    .hero-copy { display: grid; justify-items: start; gap: clamp(15px, 3vh, 27px); }
+    .cover .button.primary { background: var(--cyan); border-color: var(--cyan); color: #09223d; padding-inline: 1.1rem; }
+    .cover .button.primary:hover { background: #d1f3ff; color: #09223d; }
+    .circuit {
+      margin: 0;
+      border-top: 1px solid #ffffff4a;
+      border-bottom: 1px solid #ffffff4a;
+      padding: 16px 0 18px;
+      color: #eef7ff;
+    }
+    .circuit figcaption { margin-top: 15px; color: #d1e1ed; font-size: .91rem; }
+    .wire-row {
+      display: grid;
+      grid-template-columns: 5.5ch 1fr 26px 1fr 2.5ch;
+      align-items: center;
+      min-height: 53px;
+      font-family: var(--mono);
+      font-size: 1.06rem;
+      white-space: nowrap;
+    }
+    .wire { height: 1px; background: #a4c4d6; }
+    .gate-mark { display: grid; place-items: center; position: relative; height: 100%; }
+    .gate-mark::before { content: ""; position: absolute; width: 1px; height: 100%; background: var(--cyan); }
+    .wire-row:first-of-type .gate-mark::before { top: 50%; height: 50%; }
+    .wire-row:last-of-type .gate-mark::before { bottom: 50%; height: 50%; }
+    .gate-mark span { position: relative; z-index: 1; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cyan); }
+    .target-mark {
+      width: 26px; height: 26px; display: grid; place-items: center;
+      border: 1px solid var(--cyan); border-radius: 50%; background: #152c48;
+      color: var(--cyan); font-size: 1.15rem;
+    }
+    .wire-output { text-align: right; color: var(--cyan); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: .45rem .6rem; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-size: .86rem; font-weight: 700; }
+    td { font-size: 1.04rem; }
+    .truth th, .truth td { text-align: center; font-family: var(--mono); }
+    .truth td { font-size: 1.1rem; }
+    .truth .collision td { background: var(--blue-bg); color: #173d75; }
+    .logic-table-wrap { max-width: 520px; width: 100%; justify-self: end; }
+    .logic-table-wrap figcaption { margin-top: 10px; }
+    details.reveal { border-top: 1px solid var(--line); padding-top: 8px; }
+    summary { cursor: pointer; color: var(--blue); font-weight: 700; }
+    details p { margin: .55rem 0 0; }
+    .mapping {
+      padding: clamp(17px, 2.7vw, 34px);
+      background: var(--dark);
+      color: white;
+      border-radius: 8px;
+      display: grid;
+      gap: 12px;
+    }
+    .mapping strong, .mapping .accent { color: var(--cyan); }
+    .mapping .note { color: #d6e0ec; }
+    .gate-rules { display: grid; gap: 0; margin: 0; }
+    .gate-rules div { display: grid; grid-template-columns: 7.1ch minmax(0, 1fr); gap: 12px; padding: .8rem 0; border-bottom: 1px solid var(--line); }
+    .gate-rules div:first-child { border-top: 1px solid var(--line); }
+    .gate-rules dt { font: 750 1.02rem var(--mono); color: var(--blue); }
+    .gate-rules dd { margin: 0; }
+    .bench {
+      display: grid;
+      gap: 13px;
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--blue);
+      border-radius: 7px;
+      padding: clamp(15px, 2.1vw, 25px);
+      background: #f5f7f5;
+    }
+    .bit-row { display: flex; gap: clamp(5px, 1.3vw, 13px); align-items: stretch; }
+    .bit {
+      flex: 1; min-width: 0; padding: .33rem .2rem;
+      text-align: center; background: white; color: var(--ink);
+      border: 1px solid var(--line); border-radius: 7px;
+    }
+    button.bit:hover { border-color: var(--blue); }
+    button.bit small { text-decoration: underline; text-underline-offset: .22em; }
+    .bit small { display: block; color: var(--muted); font-size: .78rem; }
+    .bit b { display: block; font: 700 clamp(1.3rem, 3.1vw, 2rem)/1.25 var(--mono); }
+    .bit.target, .bit.changed { background: var(--blue-bg); border-color: #adc0e0; }
+    .result { color: #173d75; min-height: 1.55em; font-weight: 680; }
+    .inverse-rows { display: grid; gap: 11px; }
+    .inverse-row { display: grid; grid-template-columns: 6ch minmax(0, 1fr); gap: 11px; align-items: baseline; }
+    .inverse-row .formula { white-space: nowrap; }
+    .steps {
+      display: grid;
+      gap: 6px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .steps li { border-left: 3px solid var(--line); padding: .45rem .7rem; }
+    .steps li[aria-current="step"] { border-color: var(--blue); background: var(--blue-bg); }
+    .steps li small { color: var(--muted); font-size: .83rem; display: block; }
+    .phase-meters { display: grid; gap: 10px; }
+    .phase-meter {
+      display: grid;
+      grid-template-columns: 2.8ch minmax(0, 1fr) 4.5ch;
+      align-items: center;
+      font-family: var(--mono);
+      gap: 8px;
+    }
+    .meter-track { height: 12px; border-radius: 30px; background: #dbe4e7; overflow: hidden; }
+    .meter-fill { height: 100%; width: 50%; background: var(--blue); }
+    .meter-number { justify-self: end; }
+    [aria-pressed="true"].toggle { color: #153d78; background: var(--blue-bg); border-color: #8eaedc; }
+    .quiz { display: grid; gap: 14px; }
+    .quiz-questions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 25px); }
+    .quiz fieldset { margin: 0; min-inline-size: 0; padding: 0; border: 0; }
+    .quiz legend { width: 100%; font-weight: 750; padding: .55rem 0 .28rem; border-top: 2px solid var(--line); }
+    .quiz label { display: flex; align-items: center; gap: .45rem; min-height: 33px; cursor: pointer; }
+    .quiz input { accent-color: var(--blue); }
+    .quiz-feedback { font-size: .91rem; margin-top: .35rem; }
+    .quiz-feedback.good { color: var(--good); }
+    .quiz-feedback.bad { color: var(--bad); }
+    .quiz-results { margin: 0; }
+    .quiz-results li + li { margin-top: .35rem; }
+    .flow {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      padding: 0;
+      margin: 0;
+      border-block: 1px solid var(--line);
+    }
+    .flow li { padding: .85rem 1rem; position: relative; }
+    .flow li:first-child { padding-left: 0; }
+    .flow li:not(:last-child)::after {
+      content: "→"; position: absolute; right: -.48em; top: .77rem; color: var(--blue); font: 700 1.2rem var(--mono);
+    }
+    .flow h3 { margin-bottom: .25rem; color: var(--blue); }
+    .flow p { font-size: .91rem; color: var(--muted); }
+    .feedback-loop { font-size: .96rem; }
+    .sources {
+      list-style: none; margin: 0; padding: 0;
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(16px, 4vw, 50px);
+    }
+    .sources li { display: grid; grid-template-columns: 3.6ch minmax(0, 1fr); padding: .6rem 0; border-top: 1px solid var(--line); gap: .6rem; }
+    .sources strong { font-size: .95rem; }
+    .sources span { color: var(--muted); }
+    .sources .source-id { color: var(--blue); font: 700 .91rem var(--mono); }
+    .source-links { display: flex; gap: .7rem; font-size: .83rem; }
+    .controls {
+      min-height: 70px;
+      position: sticky;
+      z-index: 2;
+      bottom: 0;
+      background: var(--shell);
+      padding-block: .5rem;
+    }
+    .position { display: flex; gap: .75rem; align-items: center; min-width: 0; }
+    .position .mono { font-size: .86rem; font-weight: 700; white-space: nowrap; }
+    .progress { width: clamp(35px, 12vw, 165px); height: 4px; background: #bfcacb; border-radius: 9px; }
+    .progress span { display: block; height: 100%; background: var(--blue); border-radius: inherit; }
+    dialog {
+      max-height: min(83svh, 680px);
+      width: min(540px, calc(100% - 30px));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 19px;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    dialog::backdrop { background: #061529a8; }
+    dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    dialog ol { margin: 13px 0 0; padding: 0; list-style: none; }
+    dialog li + li { margin-top: 4px; }
+    .jump { display: flex; text-align: left; align-items: center; gap: .75rem; width: 100%; }
+    .jump[aria-current="step"] { color: var(--blue); border-color: #8eaedc; background: var(--blue-bg); }
+    .jump span { font-family: var(--mono); }
+    .noscript { padding: 10px 0; color: var(--muted); }
+
+    @media (max-width: 860px) {
+      .slide { min-height: clamp(480px, calc(100svh - 127px), 700px); }
+      .split { grid-template-columns: .9fr 1.1fr; gap: 18px; }
+      .flow li { padding-inline: .75rem; }
+    }
+    @media (min-width: 681px) and (max-height: 780px) {
+      .slide { padding-block: clamp(24px, 4.2vh, 40px); }
+    }
+    @media (max-width: 680px) {
+      .wrap { width: calc(100% - 24px); }
+      .topbar { min-height: 55px; }
+      .brand { font-size: .83rem; gap: 5px; }
+      .top-actions .button { font-size: .85rem; min-height: 39px; padding: .4rem .55rem; }
+      .slide { min-height: calc(100svh - 121px); padding: 22px 17px; gap: 17px; }
+      .slide h2 { font-size: clamp(1.8rem, 8vw, 2.8rem); }
+      .split, .hero-grid, .quiz-questions, .sources { grid-template-columns: 1fr; }
+      .hero-grid { gap: 30px; }
+      .cover h1 { font-size: clamp(3rem, 13vw, 4.35rem); }
+      .circuit { max-width: 400px; }
+      .wire-row { min-height: 43px; }
+      .logic-table-wrap { justify-self: stretch; }
+      .flow { grid-template-columns: 1fr; }
+      .flow li, .flow li:first-child { padding: .55rem 0 .55rem 1.4rem; }
+      .flow li:not(:last-child)::after { content: "↓"; right: auto; left: 0; top: auto; bottom: -.5rem; }
+      .controls { min-height: 62px; }
+      .controls .button { min-height: 40px; font-size: .88rem; padding-inline: .6rem; }
+      .position { gap: .45rem; }
+    }
+    @media (max-width: 360px) {
+      .position .progress { display: none; }
+      .topbar, .controls { gap: 5px; }
+    }
+    @media print {
+      @page { size: landscape; margin: 10mm; }
+      body, .screen { background: white; }
+      .wrap { width: 100%; }
+      .screen { box-shadow: none; }
+      .topbar, .controls, dialog, .requires-js, .noscript { display: none !important; }
+      .slide, .slide[hidden] {
+        display: flex !important;
+        min-height: 0;
+        padding: 12mm 10mm;
+        break-after: page;
+        print-color-adjust: exact;
+      }
+      .slide:last-child { break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar wrap">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">⊕</span>量子可逆電路</div>
+    <div class="top-actions requires-js">
+      <button class="button quiet" type="button" id="open-contents" aria-haspopup="dialog">目錄</button>
+      <button class="button quiet" type="button" id="fullscreen" hidden>全螢幕</button>
+    </div>
+  </header>
+  <noscript><p class="wrap noscript">目前以連續閱讀模式顯示。開啟 JavaScript 即可使用逐頁播放與互動示範。</p></noscript>
+
+  <main class="wrap screen" id="deck" aria-label="量子可逆電路簡報">
+    <section class="slide cover" id="slide-1" data-title="量子可逆電路" aria-labelledby="title-1">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">量子計算入門</p>
+          <h1 id="title-1" tabindex="-1">量子可逆<br>電路</h1>
+          <p class="lead">從 AND 真值表出發，理解量子閘怎麼倒轉，以及如何清理暫存位元。</p>
+          <button type="button" class="button primary requires-js" data-go="2">開始學習 <span aria-hidden="true">→</span></button>
+        </div>
+        <figure class="circuit" aria-label="Toffoli 電路圖，a 與 b 都是 1，目標 t 從 0 變成 1">
+          <div class="wire-row" aria-hidden="true"><span>a = 1</span><span class="wire"></span><span class="gate-mark"><span class="dot"></span></span><span class="wire"></span><span class="wire-output">1</span></div>
+          <div class="wire-row" aria-hidden="true"><span>b = 1</span><span class="wire"></span><span class="gate-mark"><span class="dot"></span></span><span class="wire"></span><span class="wire-output">1</span></div>
+          <div class="wire-row" aria-hidden="true"><span>t = 0</span><span class="wire"></span><span class="gate-mark"><span class="target-mark">+</span></span><span class="wire"></span><span class="wire-output">1</span></div>
+          <figcaption>Toffoli 閘有兩條控制線和一條目標線。從左往右讀取電路。</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-2" data-title="AND 的輸入能反推嗎？" aria-labelledby="title-2">
+      <header class="slide-head">
+        <h2 id="title-2" tabindex="-1">AND 的輸入能反推嗎？</h2>
+        <p class="lead">AND 接受兩個位元。兩個都是 <code>1</code> 時才輸出 <code>1</code>。</p>
+      </header>
+      <div class="split">
+        <div class="stack">
+          <h3>只看到輸出 <code>0</code>，你能猜中原本的輸入嗎？</h3>
+          <details class="reveal">
+            <summary>揭曉可能的輸入</summary>
+            <p><code>00</code>、<code>01</code>、<code>10</code> 都會得到 <code>0</code>。只憑這個輸出無法挑出唯一答案，所以 AND 不可逆。</p>
+          </details>
+          <p class="callout"><strong>可逆的判準</strong><br>每個完整輸出都能唯一對回原本的輸入。</p>
+        </div>
+        <figure class="logic-table-wrap">
+          <table class="truth" aria-label="AND 真值表">
+            <thead><tr><th scope="col">a</th><th scope="col">b</th><th scope="col">a AND b</th></tr></thead>
+            <tbody>
+              <tr class="collision"><td>0</td><td>0</td><td>0</td></tr>
+              <tr class="collision"><td>0</td><td>1</td><td>0</td></tr>
+              <tr class="collision"><td>1</td><td>0</td><td>0</td></tr>
+              <tr><td>1</td><td>1</td><td>1</td></tr>
+            </tbody>
+          </table>
+          <figcaption class="note">前三列的輸入不同，卻得到同一個輸出。</figcaption>
+        </figure>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/01-reversibility.md" target="_blank" rel="noopener">Wiki · 可逆計算</a><a href="#source-s01">S01</a><a href="#source-s02">S02</a></footer>
+    </section>
+
+    <section class="slide" id="slide-3" data-title="用 XOR 保留輸入" aria-labelledby="title-3">
+      <header class="slide-head">
+        <h2 id="title-3" tabindex="-1">用 XOR 保留輸入</h2>
+        <p class="lead">保留 <code>a</code> 和 <code>b</code>，再把 AND 的結果寫入第三個位元 <code>t</code>。</p>
+      </header>
+      <div class="split">
+        <div class="stack">
+          <div>
+            <h3>⊕ 代表 XOR</h3>
+            <p>兩位相同得到 <code>0</code>，兩位不同得到 <code>1</code>。對同一個位元 XOR <code>1</code> 兩次，就等於翻轉兩次。</p>
+          </div>
+          <p class="callout">若 <code>t</code> 起始為 <code>0</code>，新的 <code>t</code> 就是 <code>a AND b</code>。有了完整輸出，可以用同一個規則還原輸入。</p>
+        </div>
+        <div class="mapping">
+          <h3>Toffoli 的規則</h3>
+          <p class="formula">(a,b,t) → (a,b,<strong>t ⊕ ab</strong>)</p>
+          <p class="formula">110 <span class="accent">⇄</span> 111</p>
+          <p class="note">位元由左到右依序是 a、b、t。<code>ab</code> 是 <code>a AND b</code>。</p>
+        </div>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/01-reversibility.md" target="_blank" rel="noopener">Wiki · 可逆計算</a><a href="#source-s02">S02</a><a href="#source-s04">S04</a></footer>
+    </section>
+
+    <section class="slide" id="slide-4" data-title="X、CNOT 與 Toffoli" aria-labelledby="title-4">
+      <header class="slide-head">
+        <h2 id="title-4" tabindex="-1">X、CNOT 與 Toffoli</h2>
+        <p class="lead">三個閘都能翻轉目標位元。差別在於什麼條件下會翻轉。</p>
+      </header>
+      <div class="split">
+        <div class="stack">
+          <dl class="gate-rules">
+            <div><dt>X</dt><dd>每次都翻轉。</dd></div>
+            <div><dt>CNOT</dt><dd>一個控制位元為 <code>1</code> 時翻轉。</dd></div>
+            <div><dt>Toffoli</dt><dd>兩個控制位元都為 <code>1</code> 時翻轉。也寫作 <code>CCX</code>。</dd></div>
+          </dl>
+          <p class="note">控制位元維持原值，三個閘各自做兩次都能回到原值。</p>
+        </div>
+        <div class="bench">
+          <h3>試跑 Toffoli</h3>
+          <p class="note requires-js">點選 a、b、t 切換位元。每執行一次，輸出會成為下一次的輸入。</p>
+          <div class="bit-row requires-js" aria-label="目前位元">
+            <button type="button" class="bit" data-gate-bit="0" aria-label="控制位元 a" aria-pressed="true"><small>a 控制</small><b>1</b></button>
+            <button type="button" class="bit" data-gate-bit="1" aria-label="控制位元 b" aria-pressed="true"><small>b 控制</small><b>1</b></button>
+            <button type="button" class="bit target" data-gate-bit="2" aria-label="目標位元 t" aria-pressed="false"><small>t 目標</small><b>0</b></button>
+          </div>
+          <p id="gate-result" class="result mono" aria-live="polite">110 → 111 → 110</p>
+          <div class="actions requires-js">
+            <button type="button" class="button primary" id="run-gate">執行 Toffoli</button>
+            <button type="button" class="button quiet" id="reset-gate">重設</button>
+          </div>
+        </div>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/02-gates.md" target="_blank" rel="noopener">Wiki · 基本可逆閘</a><a href="#source-s02">S02</a><a href="#source-s03">S03</a><a href="#source-s04">S04</a></footer>
+    </section>
+
+    <section class="slide" id="slide-5" data-title="酉運算與逆電路" aria-labelledby="title-5">
+      <header class="slide-head">
+        <h2 id="title-5" tabindex="-1">酉運算與逆電路</h2>
+        <p class="lead">量子位元有 <code>|0⟩</code>、<code>|1⟩</code> 兩個計算基底態，也能處在兩者的疊加態。Toffoli 的真值表描述它如何移動基底態。</p>
+      </header>
+      <div class="split">
+        <div class="stack">
+          <div><h3>酉閘可以還原量子態</h3><p>理想酉閘 <code>U</code> 有逆閘 <code>U†</code>。先做 <code>U</code> 再做 <code>U†</code>，整個量子態就會回到原樣。</p></div>
+          <div><h3>量測會讀出一個結果</h3><p>只保留量測讀值時，通常無法從讀值還原原本的疊加態。這裡反轉的是酉閘組成的電路。</p></div>
+        </div>
+        <div class="mapping inverse-rows">
+          <h3>從最後一道閘開始撤銷</h3>
+          <p class="note">倒轉閘的順序，並把每道閘換成它的逆閘。</p>
+          <div class="inverse-row"><span>正向</span><p class="formula">H → S</p></div>
+          <div class="inverse-row"><span>反向</span><p class="formula"><strong>S† → H</strong></p></div>
+          <p class="note">H 的逆閘是 H。S 將 <code>|1⟩</code> 分量乘上 <code>i</code>，S† 再乘上 <code>−i</code> 便能抵消。</p>
+        </div>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/03-unitarity.md" target="_blank" rel="noopener">Wiki · 酉運算與電路反轉</a><a href="#source-s03">S03</a><a href="#source-s04">S04</a><a href="#source-s06">S06</a></footer>
+    </section>
+
+    <section class="slide" id="slide-6" data-title="反計算與暫存位元" aria-labelledby="title-6">
+      <header class="slide-head">
+        <h2 id="title-6" tabindex="-1">反計算與暫存位元</h2>
+        <p class="lead">先把結果寫入輸出位元 <code>y</code>，再用逆閘把工作位元 <code>w</code> 還原為 <code>0</code>。</p>
+      </header>
+      <div class="split">
+        <div class="stack">
+          <ol class="steps" aria-label="反計算的三道閘">
+            <li data-clean-stage="1"><strong>1. 算出 AND</strong><small>Toffoli 將 <code>ab</code> 寫入起始為 0 的 <code>w</code>。</small></li>
+            <li data-clean-stage="2"><strong>2. 寫入輸出</strong><small>CNOT 把 <code>w</code> XOR 到 <code>y</code>。</small></li>
+            <li data-clean-stage="3"><strong>3. 還原暫存位元</strong><small>再做一次 Toffoli，讓 <code>w</code> 回到 0。</small></li>
+          </ol>
+          <p class="note">當 <code>(a,b) = (1,1)</code> 且 <code>y</code> 起始為 0，四位狀態依序是 <code>1100 → 1110 → 1111 → 1101</code>。</p>
+        </div>
+        <div class="bench">
+          <h3>四條線的狀態</h3>
+          <div class="bit-row" id="clean-bits" aria-label="a、b、w、y 的目前狀態">
+            <div class="bit"><small>a 輸入</small><b>1</b></div>
+            <div class="bit"><small>b 輸入</small><b>1</b></div>
+            <div class="bit target"><small>w 暫存</small><b>0</b></div>
+            <div class="bit"><small>y 輸出</small><b>0</b></div>
+          </div>
+          <p id="clean-result" class="result" aria-live="polite">初始狀態 <code>1100</code></p>
+          <div class="actions requires-js">
+            <button type="button" class="button primary" id="clean-next">執行下一道閘</button>
+            <button type="button" class="button quiet" id="clean-back" disabled>退回一步</button>
+            <button type="button" class="button toggle" id="clean-y" title="切換初始 y 並重新開始" aria-label="將初始 y 設為 1" aria-pressed="false">初始 y = 0</button>
+          </div>
+        </div>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/04-uncomputation.md" target="_blank" rel="noopener">Wiki · 反計算</a><a href="#source-s01">S01</a><a href="#source-s04">S04</a></footer>
+    </section>
+
+    <section class="slide" id="slide-7" data-title="延伸｜相位回踢" aria-labelledby="title-7">
+      <header class="slide-head">
+        <p class="eyebrow">延伸</p>
+        <h2 id="title-7" tabindex="-1">相位回踢</h2>
+        <p class="lead"><code>|+⟩</code> 和 <code>|−⟩</code> 直接量測時，讀到 0 或 1 的機率都各半。兩種狀態仍可透過 H 閘分辨。</p>
+      </header>
+      <div class="split">
+        <div class="stack">
+          <div>
+            <h3>加號與減號描述相對相位</h3>
+            <p class="mono">|+⟩ = (|0⟩ + |1⟩)/√2<br>|−⟩ = (|0⟩ − |1⟩)/√2</p>
+          </div>
+          <p>令 <code>a = |+⟩</code>、<code>b = |1⟩</code>、<code>t = |−⟩</code>。Toffoli 只在 <code>a = 1</code> 的分量對 <code>t</code> 做 X。因為 <code>X|−⟩ = −|−⟩</code>，<code>a</code> 因這個相對負號變成 <code>|−⟩</code>。</p>
+          <p class="note">H 將 <code>|+⟩</code> 轉成 <code>|0⟩</code>，將 <code>|−⟩</code> 轉成 <code>|1⟩</code>。</p>
+        </div>
+        <div class="bench">
+          <h3>觀察第一個位元 a</h3>
+          <div class="actions requires-js">
+            <button type="button" class="button toggle" id="phase-ccx" aria-pressed="true">Toffoli 已啟用</button>
+            <button type="button" class="button toggle" id="phase-h" aria-pressed="false">加入 H</button>
+          </div>
+          <div class="phase-meters" aria-label="計算基底量測機率">
+            <div class="phase-meter"><span>0</span><div class="meter-track" aria-hidden="true"><div class="meter-fill" id="phase-bar-0"></div></div><span class="meter-number" id="phase-prob-0">50%</span></div>
+            <div class="phase-meter"><span>1</span><div class="meter-track" aria-hidden="true"><div class="meter-fill" id="phase-bar-1"></div></div><span class="meter-number" id="phase-prob-1">50%</span></div>
+          </div>
+          <p class="result" id="phase-result" aria-live="polite">a = |−⟩。直接量測時，0 和 1 各占 50%。</p>
+          <p class="note">先加入 H，再切換 Toffoli，比較兩次量測。</p>
+        </div>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/05-phase-kickback.md" target="_blank" rel="noopener">Wiki · 相位回踢</a><a href="#source-s05">S05</a></footer>
+    </section>
+
+    <section class="slide" id="slide-8" data-title="三題觀念檢查" aria-labelledby="title-8">
+      <header class="slide-head">
+        <h2 id="title-8" tabindex="-1">三題觀念檢查</h2>
+        <p class="lead">用剛才的位元順序判斷結果。</p>
+      </header>
+      <form id="quiz" class="quiz requires-js">
+        <div class="quiz-questions">
+          <fieldset>
+            <legend>1. 單看 AND 的輸出 <code>0</code>，原始輸入有幾種可能？</legend>
+            <label><input type="radio" name="q1" value="one">一種</label>
+            <label><input type="radio" name="q1" value="three">三種</label>
+            <label><input type="radio" name="q1" value="four">四種</label>
+            <p class="quiz-feedback" id="q1-feedback" hidden></p>
+          </fieldset>
+          <fieldset>
+            <legend>2. 將 <code>111</code> 輸入 Toffoli，一次操作後是什麼？</legend>
+            <label><input type="radio" name="q2" value="011"><code>011</code></label>
+            <label><input type="radio" name="q2" value="110"><code>110</code></label>
+            <label><input type="radio" name="q2" value="111"><code>111</code></label>
+            <p class="quiz-feedback" id="q2-feedback" hidden></p>
+          </fieldset>
+          <fieldset>
+            <legend>3. 反計算範例若從 <code>1101</code> 開始，最後是什麼？</legend>
+            <label><input type="radio" name="q3" value="1100"><code>1100</code></label>
+            <label><input type="radio" name="q3" value="1101"><code>1101</code></label>
+            <label><input type="radio" name="q3" value="1110"><code>1110</code></label>
+            <p class="quiz-feedback" id="q3-feedback" hidden></p>
+          </fieldset>
+        </div>
+        <div class="actions"><button type="submit" class="button primary">檢查答案</button><button type="reset" class="button quiet">清除作答</button></div>
+        <p class="result" id="quiz-score" aria-live="polite"></p>
+      </form>
+      <noscript>
+        <ol class="quiz-results">
+          <li>AND 輸出 0 對應哪三種輸入？答案是 <code>00</code>、<code>01</code>、<code>10</code>。</li>
+          <li>Toffoli 的輸入是 <code>111</code> 時，輸出為 <code>110</code>。</li>
+          <li>反計算從 <code>1101</code> 開始時，結束狀態是 <code>1100</code>。</li>
+        </ol>
+      </noscript>
+      <footer class="ref"><a href="quantum-reversible-wiki/wiki/02-gates.md" target="_blank" rel="noopener">Wiki · 真值表</a><a href="quantum-reversible-wiki/wiki/04-uncomputation.md" target="_blank" rel="noopener">Wiki · 反計算算例</a></footer>
+    </section>
+
+    <section class="slide" id="slide-9" data-title="Wiki 到簡報的製作流程" aria-labelledby="title-9">
+      <header class="slide-head">
+        <h2 id="title-9" tabindex="-1">Wiki 到簡報的製作流程</h2>
+        <p class="lead">先定下教學問題，再把六筆公開資料整理成可追溯的觀念頁與例題。</p>
+      </header>
+      <ol class="flow" aria-label="資料取得、整理、查核與簡報製作流程">
+        <li><h3>取得</h3><p>閱讀論文、官方教材的相關段落。</p></li>
+        <li><h3>匯入</h3><p>來源卡保留原文、位置與適用條件。</p></li>
+        <li><h3>整合</h3><p>用同一個 AND 例子串起五張觀念頁。</p></li>
+        <li><h3>查核</h3><p>對照原文，枚舉位元並核算相位。</p></li>
+        <li><h3>製作</h3><p>把驗算過的內容做成圖表、示範與測驗。</p></li>
+      </ol>
+      <div class="stack feedback-loop">
+        <p><strong>回修迴圈</strong>　遇到來源不足就回到取材。發現公式或位元順序出錯，先修正觀念頁再驗算。投影片轉寫有誤時，回到對應的 Wiki 算例更正。</p>
+        <p class="callout"><strong>實例</strong>　教材與 Wiki 的位元排列方式不同。簡報明確採用 <code>(a,b,t)</code>，並檢查八組 Toffoli 輸入，確認只有 <code>110</code> 與 <code>111</code> 互換。</p>
+      </div>
+      <footer class="ref"><a href="quantum-reversible-wiki/workflow.md" target="_blank" rel="noopener">Wiki · 完整流程圖與查核紀錄</a></footer>
+    </section>
+
+    <section class="slide" id="slide-10" data-title="來源與延伸閱讀" aria-labelledby="title-10">
+      <header class="slide-head">
+        <h2 id="title-10" tabindex="-1">來源與延伸閱讀</h2>
+        <p class="lead">每個來源編號都能回到 Wiki 的摘要、原文位置與使用範圍。</p>
+      </header>
+      <ul class="sources">
+        <li id="source-s01" tabindex="-1"><span class="source-id">S01</span><div><strong lang="en">Logical Reversibility of Computation</strong><br><span>Bennett（1973）</span><div class="source-links"><a href="quantum-reversible-wiki/sources/01-bennett.md" target="_blank" rel="noopener">來源卡</a><a href="https://users.cs.duke.edu/~reif/courses/complectures/AltModelsComp/Bennett/LogRevComp.pdf" target="_blank" rel="noopener">論文</a></div></div></li>
+        <li id="source-s02" tabindex="-1"><span class="source-id">S02</span><div><strong lang="en">Reversible Computing</strong><br><span>Toffoli（1980）</span><div class="source-links"><a href="quantum-reversible-wiki/sources/02-toffoli.md" target="_blank" rel="noopener">來源卡</a><a href="https://cqi.inf.usi.ch/qic/80_Toffoli.pdf" target="_blank" rel="noopener">論文</a></div></div></li>
+        <li id="source-s03" tabindex="-1"><span class="source-id">S03</span><div><strong lang="en">Circuits</strong><br><span>IBM Quantum Learning</span><div class="source-links"><a href="quantum-reversible-wiki/sources/03-ibm-circuits.md" target="_blank" rel="noopener">來源卡</a><a href="https://quantum.cloud.ibm.com/learning/en/courses/basics-of-quantum-information/quantum-circuits/circuits" target="_blank" rel="noopener">教材</a></div></div></li>
+        <li id="source-s04" tabindex="-1"><span class="source-id">S04</span><div><strong lang="en">Classical computations on quantum computers</strong><br><span>IBM Quantum Learning</span><div class="source-links"><a href="quantum-reversible-wiki/sources/04-ibm-classical-simulation.md" target="_blank" rel="noopener">來源卡</a><a href="https://quantum.cloud.ibm.com/learning/en/courses/fundamentals-of-quantum-algorithms/quantum-algorithmic-foundations/simulating-classical-computations" target="_blank" rel="noopener">教材</a></div></div></li>
+        <li id="source-s05" tabindex="-1"><span class="source-id">S05</span><div><strong lang="en">Deutsch’s algorithm</strong><br><span>IBM Quantum Learning</span><div class="source-links"><a href="quantum-reversible-wiki/sources/05-ibm-deutsch.md" target="_blank" rel="noopener">來源卡</a><a href="https://quantum.cloud.ibm.com/learning/en/courses/fundamentals-of-quantum-algorithms/quantum-query-algorithms/deutsch-algorithm" target="_blank" rel="noopener">教材</a></div></div></li>
+        <li id="source-s06" tabindex="-1"><span class="source-id">S06</span><div><strong lang="en">Elementary gates for quantum computation</strong><br><span>Barenco 等人（1995）</span><div class="source-links"><a href="quantum-reversible-wiki/sources/06-barenco.md" target="_blank" rel="noopener">來源卡</a><a href="https://arxiv.org/abs/quant-ph/9503016" target="_blank" rel="noopener">論文</a></div></div></li>
+      </ul>
+      <footer class="ref"><a href="quantum-reversible-wiki/README.md" target="_blank" rel="noopener">開啟 LLM Wiki 索引</a><a href="quantum-reversible-wiki/workflow.md" target="_blank" rel="noopener">查看建置紀錄</a></footer>
+    </section>
+  </main>
+
+  <footer class="controls wrap requires-js" aria-label="簡報導覽">
+    <div class="position" aria-live="polite">
+      <span class="mono" id="slide-position" aria-label="第 1 張，共 10 張">01 / 10</span>
+      <div class="progress" aria-hidden="true"><span id="slide-progress" style="width:10%"></span></div>
+    </div>
+    <div class="nav-actions">
+      <button type="button" class="button quiet" id="prev-slide" aria-keyshortcuts="ArrowLeft PageUp" title="← 或 Page Up">← 上一頁</button>
+      <button type="button" class="button primary" id="next-slide" aria-keyshortcuts="ArrowRight PageDown" title="→ 或 Page Down">下一頁 →</button>
+    </div>
+  </footer>
+
+  <dialog id="contents" aria-labelledby="contents-title">
+    <header><h2 id="contents-title">簡報目錄</h2><button type="button" class="button quiet" id="close-contents">關閉</button></header>
+    <ol id="contents-list"></ol>
+  </dialog>
+
+  <script>
+    'use strict';
+
+    const byId = id => document.getElementById(id);
+    const slides = [...document.querySelectorAll('.slide')];
+    const contents = byId('contents');
+    const previous = byId('prev-slide');
+    const next = byId('next-slide');
+    const position = byId('slide-position');
+    const progress = byId('slide-progress');
+    let activeIndex = 0;
+
+    const twoDigits = value => String(value).padStart(2, '0');
+    const contentsButtons = slides.map((slide, index) => {
+      const entry = document.createElement('li');
+      const button = document.createElement('button');
+      const label = document.createElement('span');
+      button.type = 'button';
+      button.className = 'button quiet jump';
+      label.textContent = twoDigits(index + 1);
+      label.setAttribute('aria-hidden', 'true');
+      button.append(label, slide.dataset.title);
+      entry.append(button);
+      byId('contents-list').append(entry);
+      button.addEventListener('click', () => {
+        contents.close();
+        showSlide(index);
+      });
+      return button;
+    });
+
+    function showSlide(index, options = {}) {
+      const { focus = true, anchor = null, updateUrl = true } = options;
+      if (index < 0 || index >= slides.length) return;
+      activeIndex = index;
+      const active = slides[index];
+      slides.forEach((slide, i) => { slide.hidden = i !== index; });
+      contentsButtons.forEach((button, i) => {
+        if (i === index) button.setAttribute('aria-current', 'step');
+        else button.removeAttribute('aria-current');
+      });
+      previous.disabled = index === 0;
+      next.disabled = index === slides.length - 1;
+      position.textContent = twoDigits(index + 1) + ' / ' + twoDigits(slides.length);
+      position.setAttribute('aria-label', '第 ' + (index + 1) + ' 張，共 ' + slides.length + ' 張');
+      progress.style.width = ((index + 1) / slides.length * 100) + '%';
+      if (updateUrl) history.replaceState(null, '', '#' + active.id);
+      window.scrollTo(0, 0);
+      if (focus) {
+        const heading = active.querySelector('h1, h2');
+        (anchor || heading).focus({ preventScroll: true });
+      }
+      if (anchor) anchor.scrollIntoView({ block: 'nearest' });
+    }
+
+    function readLocation(focus = false) {
+      const target = byId(location.hash.slice(1));
+      const hostSlide = target && target.closest('.slide');
+      showSlide(hostSlide ? slides.indexOf(hostSlide) : 0, {
+        focus,
+        anchor: hostSlide && target !== hostSlide ? target : null,
+        updateUrl: false
+      });
+    }
+
+    previous.addEventListener('click', () => showSlide(activeIndex - 1));
+    next.addEventListener('click', () => showSlide(activeIndex + 1));
+    document.querySelectorAll('[data-go]').forEach(button => {
+      button.addEventListener('click', () => showSlide(Number(button.dataset.go) - 1));
+    });
+    byId('open-contents').addEventListener('click', () => {
+      contents.showModal();
+      contentsButtons[activeIndex].focus();
+    });
+    byId('close-contents').addEventListener('click', () => contents.close());
+    window.addEventListener('hashchange', () => readLocation(true));
+    document.addEventListener('keydown', event => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey ||
+          contents.open || event.target.closest('input, select, textarea, [contenteditable]')) return;
+      const destinations = {
+        ArrowRight: activeIndex + 1, PageDown: activeIndex + 1,
+        ArrowLeft: activeIndex - 1, PageUp: activeIndex - 1,
+        Home: 0, End: slides.length - 1
+      };
+      if (!Object.hasOwn(destinations, event.key)) return;
+      event.preventDefault();
+      showSlide(destinations[event.key]);
+    });
+
+    const fullscreen = byId('fullscreen');
+    if (document.fullscreenEnabled) {
+      fullscreen.hidden = false;
+      fullscreen.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else await document.documentElement.requestFullscreen();
+        } catch {
+          fullscreen.hidden = true;
+        }
+      });
+      document.addEventListener('fullscreenchange', () => {
+        fullscreen.textContent = document.fullscreenElement ? '離開全螢幕' : '全螢幕';
+      });
+    }
+
+    const toffoli = ([a, b, t]) => [a, b, t ^ (a & b)];
+    const gateButtons = [...document.querySelectorAll('[data-gate-bit]')];
+    const gateResult = byId('gate-result');
+    let gateBits = [1, 1, 0];
+
+    function renderGate(before = null) {
+      gateButtons.forEach((button, i) => {
+        button.setAttribute('aria-pressed', String(Boolean(gateBits[i])));
+        button.querySelector('b').textContent = gateBits[i];
+      });
+      const current = gateBits.join('');
+      if (before) {
+        gateResult.textContent = before + ' → ' + current + (before === current ? '，目標值維持原樣' : '，目標值翻轉');
+      } else {
+        gateResult.textContent = '預測 ' + current + ' → ' + toffoli(gateBits).join('');
+      }
+    }
+
+    gateButtons.forEach((button, index) => button.addEventListener('click', () => {
+      gateBits[index] ^= 1;
+      renderGate();
+    }));
+    byId('run-gate').addEventListener('click', () => {
+      const before = gateBits.join('');
+      gateBits = toffoli(gateBits);
+      renderGate(before);
+    });
+    byId('reset-gate').addEventListener('click', () => {
+      gateBits = [1, 1, 0];
+      renderGate();
+    });
+
+    const cleanOutput = [...byId('clean-bits').querySelectorAll('.bit')];
+    const cleanStages = [...document.querySelectorAll('[data-clean-stage]')];
+    const cleanNext = byId('clean-next');
+    const cleanBack = byId('clean-back');
+    const cleanToggle = byId('clean-y');
+    let cleanIndex = 0;
+    let initialY = 0;
+
+    function renderClean() {
+      const input = [1, 1, 0, initialY];
+      const [a, b, work] = toffoli(input);
+      const output = initialY ^ work;
+      const states = [input, [a, b, work, initialY], [a, b, work, output], [...toffoli([a, b, work]), output]];
+      const current = states[cleanIndex];
+      const before = states[Math.max(0, cleanIndex - 1)];
+      cleanOutput.forEach((bit, i) => {
+        bit.querySelector('b').textContent = current[i];
+        bit.classList.toggle('changed', current[i] !== before[i]);
+      });
+      cleanStages.forEach((step, i) => {
+        if (i + 1 === cleanIndex) step.setAttribute('aria-current', 'step');
+        else step.removeAttribute('aria-current');
+      });
+      cleanToggle.textContent = '初始 y = ' + initialY;
+      cleanToggle.setAttribute('aria-pressed', String(Boolean(initialY)));
+      cleanBack.disabled = cleanIndex === 0;
+      cleanNext.textContent = cleanIndex === 3 ? '重新示範' : '執行下一道閘';
+      const labels = ['初始狀態', '暫存了 AND 的結果', '將暫存值 XOR 到 y', '暫存已清零，保留 y'];
+      byId('clean-result').textContent = current.join('') + '　' + labels[cleanIndex];
+    }
+
+    cleanNext.addEventListener('click', () => {
+      cleanIndex = (cleanIndex + 1) % 4;
+      renderClean();
+    });
+    cleanBack.addEventListener('click', () => {
+      cleanIndex -= 1;
+      renderClean();
+    });
+    cleanToggle.addEventListener('click', () => {
+      initialY ^= 1;
+      cleanIndex = 0;
+      renderClean();
+    });
+
+    const phaseCCX = byId('phase-ccx');
+    const phaseH = byId('phase-h');
+    const phaseResult = byId('phase-result');
+    let applyCCX = true;
+    let applyH = false;
+
+    function renderPhase() {
+      phaseCCX.setAttribute('aria-pressed', String(applyCCX));
+      phaseCCX.textContent = applyCCX ? 'Toffoli 已啟用' : 'Toffoli 已停用';
+      phaseH.setAttribute('aria-pressed', String(applyH));
+      phaseH.textContent = applyH ? '移除 H' : '加入 H';
+      const one = applyH ? Number(applyCCX) * 100 : 50;
+      [100 - one, one].forEach((probability, i) => {
+        byId('phase-bar-' + i).style.width = probability + '%';
+        byId('phase-prob-' + i).textContent = probability + '%';
+      });
+      phaseResult.textContent = applyH
+        ? 'H 將 a 轉成 |' + Number(applyCCX) + '⟩，量測必得 ' + Number(applyCCX) + '。'
+        : 'a = |' + (applyCCX ? '−' : '+') + '⟩。直接量測時，0 和 1 各占 50%。';
+    }
+
+    phaseCCX.addEventListener('click', () => {
+      applyCCX = !applyCCX;
+      renderPhase();
+    });
+    phaseH.addEventListener('click', () => {
+      applyH = !applyH;
+      renderPhase();
+    });
+
+    const quiz = byId('quiz');
+    const score = byId('quiz-score');
+    const answers = [
+      { name: 'q1', value: 'three', reason: '00、01、10 都輸出 0。' },
+      { name: 'q2', value: '110', reason: '兩個控制位都是 1，第三位由 1 翻成 0。' },
+      { name: 'q3', value: '1100', reason: 'y 與 1 做 XOR 後變成 0，最後一道閘也讓 w 回到 0。' }
+    ];
+
+    quiz.addEventListener('submit', event => {
+      event.preventDefault();
+      let correct = 0;
+      const picks = new FormData(quiz);
+      if (answers.some(answer => !picks.has(answer.name))) {
+        score.textContent = '請先完成三題。';
+        return;
+      }
+      for (const answer of answers) {
+        const feedback = byId(answer.name + '-feedback');
+        const matches = picks.get(answer.name) === answer.value;
+        correct += Number(matches);
+        feedback.className = 'quiz-feedback ' + (matches ? 'good' : 'bad');
+        feedback.textContent = (matches ? '答對了。' : '這題答錯。') + answer.reason;
+        feedback.hidden = false;
+      }
+      score.textContent = '答對 ' + correct + ' / ' + answers.length + ' 題。';
+    });
+    function clearFeedback() {
+      score.textContent = '';
+      for (const answer of answers) byId(answer.name + '-feedback').hidden = true;
+    }
+    quiz.addEventListener('change', clearFeedback);
+    quiz.addEventListener('reset', clearFeedback);
+
+    renderGate();
+    renderClean();
+    renderPhase();
+    document.body.classList.add('ready');
+    readLocation();
+  </script>
+</body>
+</html>
